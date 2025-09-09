@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cabinet Drawer Planner</title>
+<style>
+  :root{
+    --bg:#f7f9fb; --card:#fff; --ink:#1f2937;
+    --blue:#e1effe; --amber:#fff2cc; --green:#e9f7e7; --gray:#f2f2f2;
+    --accent:#2563eb;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;}
+  header{padding:16px 20px;background:#0f172a;color:#fff;}
+  header h1{margin:0;font-size:18px;letter-spacing:.3px}
+  main{padding:20px;display:grid;gap:16px;grid-template-columns:380px 1fr}
+  section{background:var(--card);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:16px;}
+  h2{margin:0 0 10px;font-size:16px}
+  .row{display:grid;grid-template-columns:1fr 120px 90px;gap:6px;margin:6px 0}
+  .row label{align-self:center}
+  input,select,button,textarea{font:inherit}
+  input[type="number"]{width:100%;box-sizing:border-box;padding:6px;border:1px solid #d1d5db;border-radius:6px;background:#fff}
+  input[type="text"],select{padding:6px;border:1px solid #d1d5db;border-radius:6px;background:#fff}
+  .hint{color:#6b7280;font-size:12px}
+  .groupTitle{margin-top:10px;padding:6px 8px;border-radius:6px;background:var(--blue);font-weight:600}
+  .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .btn{border:0;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer}
+  .primary{background:var(--accent);color:#fff}
+  .ghost{background:#e5e7eb}
+  .danger{background:#ef4444;color:#fff}
+  #drawWrap{display:flex;gap:16px;align-items:flex-start}
+  #svgbox{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px}
+  table{border-collapse:collapse;width:100%;background:#fff}
+  th,td{border:1px solid #e5e7eb;padding:6px 8px}
+  th{background:var(--amber);text-align:left}
+  .titlebar{background:var(--green);font-weight:700}
+  .muted{color:#6b7280}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  /* print */
+  @media print{
+    header, .btnbar, #pricingCard{display:none}
+    main{grid-template-columns:1fr}
+    section{box-shadow:none;border:0}
+  }
+</style>
+</head>
+<body>
+<header><h1>Cabinet Drawer Planner — Web</h1></header>
+
+<main>
+
+  <!-- Inputs -->
+  <section id="inputsCard">
+    <h2>Cabinet Planner Inputs</h2>
+
+    <div class="row"><label>Cabinet ID</label><input id="cabId" type="text" placeholder="CAB001" /></div>
+    <div class="row"><label>Drawer count</label><input id="drawerCount" type="number" min="1" max="10" value="4"/></div>
+
+    <div class="groupTitle">Face Frame & Cabinet</div>
+    <div class="row"><label>Stile width each side (in)</label><input id="stile" type="number" step="0.001" value="1.5"/></div>
+    <div class="row"><label>Rail thickness between drawers (in)</label><input id="rail" type="number" step="0.001" value="1.5"/></div>
+    <div class="row"><label>Cabinet clear height (in)</label><input id="cabH" type="number" step="0.001" value="29"/></div>
+    <div class="row"><label>Cabinet overall width (in)</label><input id="cabW" type="number" step="0.001" value="24"/></div>
+
+    <div class="groupTitle">Drawer & Joinery</div>
+    <div class="row"><label>Drawer slide length (in)</label><input id="slideLen" type="number" step="1" value="21"/></div>
+    <div class="row"><label>Box material thickness (in)</label><input id="boxThk" type="number" step="0.001" value="0.625"/></div>
+    <div class="row"><label>Side clearance to stile (in)</label><input id="sideClr" type="number" step="0.001" value="0.1875"/></div>
+    <div class="row"><label>Top clearance to rail above (in)</label><input id="topClr" type="number" step="0.001" value="1"/></div>
+    <div class="row"><label>Bottom clearance to rail below (in)</label><input id="botClr" type="number" step="0.001" value="0.568"/></div>
+    <div class="row"><label>Bottom panel thickness (in)</label><input id="bottomThk" type="number" step="0.001" value="0.236"/></div>
+    <div class="row"><label>Bottom groove depth (in)</label><input id="grooveDepth" type="number" step="0.001" value="0.375"/></div>
+    <div class="row"><label>Bottom per-side play (in)</label><input id="bottomPlay" type="number" step="0.001" value="0.02"/></div>
+
+    <div class="groupTitle">Manual drawer heights (optional)</div>
+    <div class="row"><label class="hint">Enter comma-separated inches (e.g. 6,6,7,10)</label>
+      <input id="manualHeights" type="text" placeholder="leave blank to auto-fill"/></div>
+
+    <div class="groupTitle">Pricing</div>
+    <div class="row"><label>Hardwood species ($/BF)</label>
+      <select id="hardwoodSel"></select>
+      <span class="hint mono" id="hardwoodUnitPrice"></span>
+    </div>
+    <div class="row"><label>Bottom plywood ($/ft²)</label>
+      <select id="plywoodSel"></select>
+      <span class="hint mono" id="plywoodUnitPrice"></span>
+    </div>
+    <div class="row"><label>Waste %</label><input id="wastePct" type="number" step="0.01" value="0.10"/></div>
+    <div class="row"><label>Hardware upcharge %</label><input id="hwUpPct" type="number" step="0.01" value="0.00"/></div>
+    <div class="row"><label>Slides price lookup</label>
+      <select id="slidePriceSel"></select>
+      <span class="hint">nearest length used</span>
+    </div>
+
+    <div class="btnbar">
+      <button class="btn primary" id="btnRecalc">Update Drawing</button>
+      <button class="btn ghost" id="btnPrint">Print / Save PDF</button>
+    </div>
+  </section>
+
+  <!-- Drawing + Run Sheet -->
+  <section>
+    <div id="drawWrap">
+      <div>
+        <h2>Cabinet Drawing</h2>
+        <div id="svgbox"><svg id="cabSVG" width="520" height="520" viewBox="0 0 520 520"></svg></div>
+        <div class="hint">Drawing is schematic (not to true scale), but all sizes below are exact.</div>
+        <div class="btnbar">
+          <button class="btn primary" id="btnAppend">Add to Run Sheet</button>
+          <button class="btn danger" id="btnClearRun">Clear Run Sheet</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="runWrap" style="margin-top:16px">
+      <h2>Run Sheet</h2>
+      <div id="runSheet"></div>
+    </div>
+  </section>
+
+  <!-- Pricing “sheet” editor -->
+  <section id="pricingCard">
+    <h2>Pricing Tables</h2>
+    <div class="hint">Edit values; they save to your browser. Lengths are inches; prices are USD.</div>
+    <h3>Hardwood ($/BF)</h3>
+    <table id="tblHard"><thead><tr><th>Species</th><th>$/BF</th><th></th></tr></thead><tbody></tbody></table>
+    <div class="btnbar"><button class="btn ghost" id="addHard">Add Hardwood</button></div>
+
+    <h3>Plywood ($/ft²)</h3>
+    <table id="tblPly"><thead><tr><th>Material</th><th>$/ft²</th><th></th></tr></thead><tbody></tbody></table>
+    <div class="btnbar"><button class="btn ghost" id="addPly">Add Plywood</button></div>
+
+    <h3>Slides ($/pair)</h3>
+    <table id="tblSlides"><thead><tr><th>Length (in)</th><th>$/pair</th><th></th></tr></thead><tbody></tbody></table>
+    <div class="btnbar"><button class="btn ghost" id="addSlide">Add Slide Length</button></div>
+  </section>
+
+</main>
+
+<script>
+/* =============== Data / storage =============== */
+const LS_KEY = 'cabinet-planner-pricing-v1';
+const defaults = {
+  hardwood: [
+    {name:'Maple', price:6.00},
+    {name:'Oak', price:5.00},
+    {name:'Cherry', price:7.50},
+    {name:'Walnut', price:9.00},
+    {name:'Poplar', price:4.25},
+  ],
+  plywood: [
+    {name:'0.236 Baltic Birch', price:2.95},
+    {name:'5/8 Maple Ply', price:4.25},
+    {name:'3/4 Maple Ply', price:5.10},
+    {name:'1/2 Birch Ply', price:2.60},
+  ],
+  slides: [
+    {len:16, price:14.50},
+    {len:18, price:15.50},
+    {len:20, price:16.50},
+    {len:21, price:17.00},
+    {len:22, price:17.50},
+    {len:24, price:18.50},
+    {len:26, price:19.50},
+    {len:28, price:21.00},
+  ]
+};
+function loadPricing(){
+  const saved = JSON.parse(localStorage.getItem(LS_KEY)||'null');
+  return saved ? saved : defaults;
+}
+function savePricing(db){ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+
+/* =============== Helpers =============== */
+function parseManualHeights(s){
+  if(!s) return [];
+  return s.split(',').map(x=>parseFloat(x.trim())).filter(v=>!isNaN(v) && v>0);
+}
+function computeHeights(n, cabH, rail, manual){
+  const totalRails = n>1 ? (n-1)*rail : 0;
+  const netH = cabH - totalRails;
+  if(netH<=0) throw new Error('Net drawer height ≤ 0');
+  const lock = Array(n).fill(false), man = Array(n).fill(0);
+  manual.forEach((v,i)=>{ if(i<n){ man[i]=v; lock[i]=true; }});
+  const sumMan = man.reduce((a,v,i)=>a+(lock[i]?v:0),0);
+  const free = n - lock.filter(Boolean).length;
+  if(sumMan>netH+1e-6) throw new Error('Manual heights exceed available net height');
+  const autoH = free>0 ? (netH-sumMan)/free : 0;
+  return Array.from({length:n},(_,i)=> lock[i]?man[i]:autoH);
+}
+function nearestSlidePrice(db,len){
+  let best=Infinity, price=0;
+  db.slides.forEach(r=>{
+    const d=Math.abs(r.len-len);
+    if(d<best){best=d; price=r.price;}
+  });
+  return price;
+}
+function fmt(v,prec=3){ return Number(v).toFixed(prec); }
+function money(v){ return '$'+Number(v).toFixed(2); }
+
+/* =============== UI builders for pricing editor =============== */
+const db = loadPricing();
+const hardBody = document.querySelector('#tblHard tbody');
+const plyBody  = document.querySelector('#tblPly tbody');
+const slideBody= document.querySelector('#tblSlides tbody');
+function drawPricingTables(){
+  hardBody.innerHTML = '';
+  db.hardwood.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td contenteditable>${r.name}</td>
+                    <td contenteditable>${r.price}</td>
+                    <td><button class="btn ghost" data-group="hardwood" data-i="${i}">Delete</button></td>`;
+    hardBody.appendChild(tr);
+  });
+  plyBody.innerHTML='';
+  db.plywood.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td contenteditable>${r.name}</td>
+                    <td contenteditable>${r.price}</td>
+                    <td><button class="btn ghost" data-group="plywood" data-i="${i}">Delete</button></td>`;
+    plyBody.appendChild(tr);
+  });
+  slideBody.innerHTML='';
+  db.slides.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td contenteditable>${r.len}</td>
+                    <td contenteditable>${r.price}</td>
+                    <td><button class="btn ghost" data-group="slides" data-i="${i}">Delete</button></td>`;
+    slideBody.appendChild(tr);
+  });
+  refreshPricingSelectors();
+}
+function readTableEdits(){
+  db.hardwood = Array.from(hardBody.querySelectorAll('tr')).map(tr=>({
+    name: tr.children[0].innerText.trim(),
+    price: parseFloat(tr.children[1].innerText)||0
+  })).filter(r=>r.name);
+  db.plywood = Array.from(plyBody.querySelectorAll('tr')).map(tr=>({
+    name: tr.children[0].innerText.trim(),
+    price: parseFloat(tr.children[1].innerText)||0
+  })).filter(r=>r.name);
+  db.slides = Array.from(slideBody.querySelectorAll('tr')).map(tr=>({
+    len: parseFloat(tr.children[0].innerText)||0,
+    price: parseFloat(tr.children[1].innerText)||0
+  })).filter(r=>r.len>0);
+  savePricing(db);
+  refreshPricingSelectors();
+}
+
+/* =============== Inputs selectors fed by pricing =============== */
+const selHard = document.getElementById('hardwoodSel');
+const selPly  = document.getElementById('plywoodSel');
+const selSlide= document.getElementById('slidePriceSel');
+const uiHardPrice = document.getElementById('hardwoodUnitPrice');
+const uiPlyPrice  = document.getElementById('plywoodUnitPrice');
+
+function refreshPricingSelectors(){
+  selHard.innerHTML = db.hardwood.map(r=>`<option value="${r.name}">${r.name}</option>`).join('');
+  selPly.innerHTML  = db.plywood.map(r=>`<option value="${r.name}">${r.name}</option>`).join('');
+  selSlide.innerHTML= db.slides.map(r=>`<option value="${r.len}">${r.len}" — ${money(r.price)}/pair</option>`).join('');
+  updateLiveUnitPrices();
+}
+function findHardPrice(name){ const r=db.hardwood.find(x=>x.name.toLowerCase()===(name||'').toLowerCase()); return r? r.price:0; }
+function findPlyPrice(name){ const r=db.plywood.find(x=>x.name.toLowerCase()===(name||'').toLowerCase()); return r? r.price:0; }
+function updateLiveUnitPrices(){
+  uiHardPrice.textContent = money(findHardPrice(selHard.value));
+  uiPlyPrice.textContent  = money(findPlyPrice(selPly.value));
+}
+
+/* =============== Drawing (SVG) & calculations =============== */
+const svg = document.getElementById('cabSVG');
+
+function redraw(){
+  updateLiveUnitPrices();
+
+  const id = document.getElementById('cabId').value.trim() || '(no id)';
+  const n = Math.max(1, Math.min(10, parseInt(document.getElementById('drawerCount').value||1)));
+  const stile = +document.getElementById('stile').value;
+  const rail  = +document.getElementById('rail').value;
+  const cabH  = +document.getElementById('cabH').value;
+  const cabW  = +document.getElementById('cabW').value;
+  const slideLen = +document.getElementById('slideLen').value;
+  const boxThk   = +document.getElementById('boxThk').value;
+  const sideClr  = +document.getElementById('sideClr').value;
+  const topClr   = +document.getElementById('topClr').value;
+  const botClr   = +document.getElementById('botClr').value;
+  const bottomThk= +document.getElementById('bottomThk').value;
+  const grooveDepth= +document.getElementById('grooveDepth').value;
+  const bottomPlay = +document.getElementById('bottomPlay').value;
+  const manHeights = parseManualHeights(document.getElementById('manualHeights').value);
+  const wastePct = +document.getElementById('wastePct').value;
+  const upPct    = +document.getElementById('hwUpPct').value;
+  const hardName = selHard.value;
+  const plyName  = selPly.value;
+
+  const hardUnit = findHardPrice(hardName);
+  const plyUnit  = findPlyPrice(plyName);
+  const slideUnit= nearestSlidePrice(db, slideLen);
+
+  const h = computeHeights(n, cabH, rail, manHeights);
+  const openW = cabW - 2*stile;
+  if(openW<=0) throw new Error('Opening width ≤ 0');
+
+  // sizes per drawer
+  const Wout=[], Hout=[], Win=[], Lin=[], botW=[], botL=[];
+  for(let i=0;i<n;i++){
+    Wout[i] = Math.max(0, openW - 2*sideClr);
+    Hout[i] = Math.max(0, h[i] - (topClr + botClr));
+    Win[i]  = Math.max(0, Wout[i] - 2*boxThk);
+    Lin[i]  = Math.max(0, slideLen - 2*boxThk);
+    botW[i] = Math.max(0, Win[i] + 2*(grooveDepth - bottomPlay));
+    botL[i] = Math.max(0, Lin[i] + 2*(grooveDepth - bottomPlay));
+  }
+
+  // Material quantities
+  // hardwood BF for box: 2 sides + front + back (5/8 maple)
+  let bf=0, ft2Bottom=0, ft2BoxPly=0;
+  for(let i=0;i<n;i++){
+    bf += (boxThk * Hout[i] * slideLen)/144 * 2; // sides
+    bf += (boxThk * Hout[i] * Wout[i])/144 * 2;  // front+back
+    ft2Bottom += (botW[i]*botL[i])/144;
+    ft2BoxPly += (2*slideLen*Hout[i] + 2*Wout[i]*Hout[i]) / 144; // only if someone wants plywood box
+  }
+  bf *= (1+wastePct);
+  ft2Bottom *= (1+wastePct);
+
+  const slidesPairs = n;
+  const slidesTotal = slidesPairs * slideUnit * (1+upPct);
+
+  const hardLine = bf * hardUnit;
+  const botLine  = ft2Bottom * plyUnit;
+  const matCost  = hardLine + botLine;
+  const grand    = matCost + slidesTotal;
+
+  // ---- SVG drawing ----
+  const W=480,H=480,margin=20;
+  svg.innerHTML='';
+  const s = svg; // shorthand
+  function rect(x,y,w,h,stroke='#1f2937',fill='none',sw=2){
+    const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',w); r.setAttribute('height',h);
+    r.setAttribute('fill',fill); r.setAttribute('stroke',stroke); r.setAttribute('stroke-width',sw);
+    s.appendChild(r);
+  }
+  function text(x,y,t,cls=''){const g=document.createElementNS('http://www.w3.org/2000/svg','text'); g.setAttribute('x',x); g.setAttribute('y',y); g.setAttribute('font-size','11'); g.textContent=t; s.appendChild(g);}
+
+  // frame
+  rect(margin,margin,W-2*margin,H-2*margin,'#111', 'none', 2);
+  // stiles
+  const stilePx = 14; // cosmetic width
+  rect(margin,margin,stilePx,H-2*margin,'#111');
+  rect(W-margin-stilePx,margin,stilePx,H-2*margin,'#111');
+
+  // rails between drawers (visual)
+  const totalH = cabH;
+  let yTop = margin;
+  const railPx = 10;
+  const usable = H-2*margin;
+  // map drawer heights proportionally
+  let y = margin;
+  for(let i=0;i<n;i++){
+    const hpx = (Hout[i]/cabH) * usable * 0.9 + 18; // legible sizing
+    rect(margin+stilePx, y, W-2*margin-2*stilePx, hpx, '#0f172a', 'rgba(37,99,235,0.05)', 1.5);
+    text(margin+stilePx+6, y+14, `Drawer ${i+1}`);
+    y += hpx + 10;
+  }
+  text(margin, H-4, `ID: ${id}  |  Opening W: ${fmt(openW)} in`);
+
+  // ---- Right-hand computed tables (for the current cabinet preview only) ----
+  const previewHTML = `
+    <table>
+      <thead><tr><th class="titlebar" colspan="6">Materials & Cost (Preview)</th></tr></thead>
+      <tbody>
+        <tr><th>Hardwood (BF)</th><td class="mono">${fmt(bf,3)}</td><th>$/BF</th><td class="mono">${money(hardUnit)}</td><th>Line</th><td class="mono">${money(hardLine)}</td></tr>
+        <tr><th>Bottom Plywood (ft²)</th><td class="mono">${fmt(ft2Bottom,3)}</td><th>$/ft²</th><td class="mono">${money(plyUnit)}</td><th>Line</th><td class="mono">${money(botLine)}</td></tr>
+        <tr><th>Slides (pairs)</th><td class="mono">${slidesPairs}</td><th>Unit</th><td class="mono">${money(slideUnit)}</td><th>Line</th><td class="mono">${money(slidesTotal)}</td></tr>
+        <tr><th>Waste %</th><td class="mono">${fmt(wastePct*100,1)}%</td><th>HW upcharge %</th><td class="mono">${fmt(upPct*100,1)}%</td><th>Grand</th><td class="mono"><b>${money(grand)}</b></td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Box parts priced as 5/8" hardwood (sides/front/back). Bottom is plywood panel in grooves (depth ${fmt(+document.getElementById('grooveDepth').value)}").</p>
+  `;
+  // show under drawing
+  document.getElementById('drawWrap').querySelector('div').insertAdjacentHTML('beforeend',
+    (()=>{ const old=document.getElementById('previewTbl'); if(old) old.remove(); return `<div id="previewTbl" style="margin-top:10px">${previewHTML}</div>`})()
+  );
+
+  // expose values to add-to-run-sheet
+  redraw.current = {
+    id, n, stile, rail, cabH, cabW, slideLen, boxThk, sideClr, topClr, botClr,
+    bottomThk, grooveDepth, bottomPlay, hardName, plyName, wastePct, upPct,
+    hardUnit, plyUnit, slideUnit, bf, ft2Bottom, slidesPairs, slidesTotal, grand,
+    openW, Hout, Wout, Win, Lin, botW, botL
+  };
+}
+
+redraw.current = null;
+
+/* =============== Run Sheet =============== */
+function addToRunSheet(){
+  if(!redraw.current){ redraw(); }
+  const d = redraw.current;
+  const run = document.getElementById('runSheet');
+
+  // snapshot SVG to PNG (canvas)
+  const serializer = new XMLSerializer();
+  const data = serializer.serializeToString(svg);
+  const blob = new Blob([data], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 520; canvas.height = 520;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0);
+    const png = canvas.toDataURL('image/png');
+    URL.revokeObjectURL(url);
+
+    // card
+    const card = document.createElement('section');
+    card.style.margin='12px 0';
+    card.innerHTML = `
+      <table>
+        <thead><tr><th class="titlebar" colspan="8">Cabinet Header — ${d.id}</th></tr></thead>
+        <tbody>
+          <tr><th>Cabinet W</th><td class="mono">${fmt(d.cabW)}</td>
+              <th>Cabinet H</th><td class="mono">${fmt(d.cabH)}</td>
+              <th>Stile (ea)</th><td class="mono">${fmt(d.stile)}</td>
+              <th>Rail</th><td class="mono">${fmt(d.rail)}</td></tr>
+          <tr><th>Slide L</th><td class="mono">${fmt(d.slideLen)}</td>
+              <th>Opening W</th><td class="mono">${fmt(d.openW)}</td>
+              <th>SideClr</th><td class="mono">${fmt(d.sideClr)}</td>
+              <th>Top/BottomClr</th><td class="mono">${fmt(d.topClr)}/${fmt(d.botClr)}</td></tr>
+          <tr><th>Hardwood</th><td>${d.hardName}</td><th>Plywood</th><td>${d.plyName}</td><th>Waste %</th><td class="mono">${fmt(d.wastePct*100,1)}%</td><th>Upcharge %</th><td class="mono">${fmt(d.upPct*100,1)}%</td></tr>
+        </tbody>
+      </table>
+      <div style="display:flex;gap:16px;margin-top:8px;align-items:flex-start">
+        <img src="${png}" alt="drawing" style="width:320px;height:320px;border:1px solid #e5e7eb;border-radius:8px;background:#fff"/>
+        <table style="flex:1">
+          <thead><tr><th class="titlebar" colspan="6">Materials & Cost</th></tr></thead>
+          <tbody>
+            <tr><th>Hardwood (BF)</th><td class="mono">${fmt(d.bf)}</td><th>$/BF</th><td class="mono">${money(d.hardUnit)}</td><th>Line</th><td class="mono">${money(d.bf*d.hardUnit)}</td></tr>
+            <tr><th>Bottom Plywood (ft²)</th><td class="mono">${fmt(d.ft2Bottom)}</td><th>$/ft²</th><td class="mono">${money(d.plyUnit)}</td><th>Line</th><td class="mono">${money(d.ft2Bottom*d.plyUnit)}</td></tr>
+            <tr><th>Slides (pairs)</th><td class="mono">${d.slidesPairs}</td><th>Unit</th><td class="mono">${money(d.slideUnit)}</td><th>Line</th><td class="mono">${money(d.slidesTotal)}</td></tr>
+            <tr><th colspan="4" class="right">Grand Total</th><td colspan="2" class="mono"><b>${money(d.grand)}</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Parts list (compact)
+    const parts = document.createElement('div');
+    parts.style.marginTop='8px';
+    let rows = `
+      <table>
+        <thead><tr>
+          <th>Drawer</th><th>Part</th><th>Qty</th><th>Width (W)</th><th>Length (L)</th><th>Height (H)</th><th>Mat Thk</th><th>Notes</th>
+        </tr></thead><tbody>`;
+    for(let i=0;i<d.n;i++){
+      rows += `
+        <tr><td>${i+1}</td><td>Side</td><td>2</td><td></td><td class="mono">${fmt(d.slideLen)}</td><td class="mono">${fmt(d.Hout[i])}</td><td class="mono">${fmt(d.boxThk)}</td><td>Full length; dovetail</td></tr>
+        <tr><td>${i+1}</td><td>Front</td><td>1</td><td class="mono">${fmt(d.Wout[i])}</td><td></td><td class="mono">${fmt(d.Hout[i])}</td><td class="mono">${fmt(d.boxThk)}</td><td>Dovetail; full outside width</td></tr>
+        <tr><td>${i+1}</td><td>Back</td><td>1</td><td class="mono">${fmt(d.Wout[i])}</td><td></td><td class="mono">${fmt(d.Hout[i])}</td><td class="mono">${fmt(d.boxThk)}</td><td>Dovetail; full outside width</td></tr>
+        <tr><td>${i+1}</td><td>Bottom</td><td>1</td><td class="mono">${fmt(d.botW[i])}</td><td class="mono">${fmt(d.botL[i])}</td><td></td><td class="mono">${fmt(d.bottomThk)}</td><td>Panel fits grooves (depth ${fmt(d.grooveDepth)})</td></tr>
+        <tr><td colspan="8" class="muted">OpenW=${fmt(d.openW)}  |  Box=${fmt(d.Wout[i])}W×${fmt(d.Hout[i])}H×${fmt(d.slideLen)}L</td></tr>
+      `;
+    }
+    rows += `</tbody></table>`;
+    parts.innerHTML = rows;
+
+    card.appendChild(parts);
+    run.appendChild(card);
+  };
+  img.src = url;
+}
+
+function clearRunSheet(){
+  document.getElementById('runSheet').innerHTML = '';
+}
+
+/* =============== Wire up UI =============== */
+document.getElementById('addHard').onclick = ()=>{ db.hardwood.push({name:'New Species',price:0}); drawPricingTables(); readTableEdits(); };
+document.getElementById('addPly').onclick  = ()=>{ db.plywood.push({name:'New Ply',price:0}); drawPricingTables(); readTableEdits(); };
+document.getElementById('addSlide').onclick= ()=>{ db.slides.push({len:22,price:0}); drawPricingTables(); readTableEdits(); };
+
+[hardBody,plyBody,slideBody].forEach(tb=>{
+  tb.addEventListener('input', ()=>{ readTableEdits(); redraw(); });
+  tb.addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    const grp=b.dataset.group, i=+b.dataset.i;
+    db[grp].splice(i,1); drawPricingTables(); readTableEdits(); redraw();
+  });
+});
+
+document.getElementById('btnRecalc').onclick = ()=>{ readTableEdits(); redraw(); };
+document.getElementById('btnAppend').onclick = ()=>{ readTableEdits(); redraw(); addToRunSheet(); };
+document.getElementById('btnClearRun').onclick = clearRunSheet;
+document.getElementById('btnPrint').onclick = ()=>window.print();
+
+selHard.onchange = ()=>{ updateLiveUnitPrices(); redraw(); };
+selPly.onchange  = ()=>{ updateLiveUnitPrices(); redraw(); };
+
+drawPricingTables();
+redraw();
+</script>
+</body>
+</html>
+
